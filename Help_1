@@ -1,0 +1,80 @@
+AUXILIARES
+> data<-spotify_songs %>%
++      select(playlist_genre, danceability, energy,valence,tempo)
+> data
+# A tibble: 32,833 x 5
+   playlist_genre danceability energy valence tempo
+   <chr>                 <dbl>  <dbl>   <dbl> <dbl>
+ 1 pop                   0.748  0.916   0.518 122. 
+ 2 pop                   0.726  0.815   0.693 100.0
+ 3 pop                   0.675  0.931   0.613 124. 
+ 4 pop                   0.718  0.93    0.277 122. 
+ 5 pop                   0.65   0.833   0.725 124. 
+ 6 pop                   0.675  0.919   0.585 125. 
+ 7 pop                   0.449  0.856   0.152 113. 
+ 8 pop                   0.542  0.903   0.367 128. 
+ 9 pop                   0.594  0.935   0.366 127. 
+10 pop                   0.642  0.818   0.59  125. 
+# ... with 32,823 more rows
+
+> data<-spotify_songs %>%
++      select(playlist_genre, danceability, energy,valence,tempo) %>%
++      mutate(tempo_0_1=0.00438*tempo-0.0208)
+> data
+# A tibble: 32,833 x 6
+   playlist_genre danceability energy valence tempo tempo_0_1
+   <chr>                 <dbl>  <dbl>   <dbl> <dbl>     <dbl>
+ 1 pop                   0.748  0.916   0.518 122.      0.514
+ 2 pop                   0.726  0.815   0.693 100.0     0.417
+ 3 pop                   0.675  0.931   0.613 124.      0.522
+ 4 pop                   0.718  0.93    0.277 122.      0.513
+ 5 pop                   0.65   0.833   0.725 124.      0.522
+ 6 pop                   0.675  0.919   0.585 125.      0.527
+ 7 pop                   0.449  0.856   0.152 113.      0.473
+ 8 pop                   0.542  0.903   0.367 128.      0.540
+ 9 pop                   0.594  0.935   0.366 127.      0.536
+10 pop                   0.642  0.818   0.59  125.      0.527
+# ... with 32,823 more rows
+> data<-spotify_songs %>%
++      select(playlist_genre, danceability, energy,valence,tempo) %>%
++      mutate(tempo_0_1=0.00438*tempo-0.0208) %>%
++      select(-tempo) %>%
++      gather(type, valeur,-playlist_genre)
+> data
+# A tibble: 131,332 x 3
+   playlist_genre type         valeur
+   <chr>          <chr>         <dbl>
+ 1 pop            danceability  0.748
+ 2 pop            danceability  0.726
+ 3 pop            danceability  0.675
+ 4 pop            danceability  0.718
+ 5 pop            danceability  0.65 
+ 6 pop            danceability  0.675
+ 7 pop            danceability  0.449
+ 8 pop            danceability  0.542
+ 9 pop            danceability  0.594
+10 pop            danceability  0.642
+# ... with 131,322 more rows
+> data<-spotify_songs %>%
++      select(playlist_genre, danceability, energy,valence,tempo) %>%
++      mutate(tempo_0_1=0.00438*tempo-0.0208) %>%
++      select(-tempo) %>%
++      gather(type, valeur,-playlist_genre) %>%
++      group_by(playlist_genre, type) %>%
++      summarise_if(is.numeric, median, na.rm = TRUE) 
+> data
+# A tibble: 24 x 3
+# Groups:   playlist_genre [6]
+   playlist_genre type         valeur
+   <chr>          <chr>         <dbl>
+ 1 edm            danceability  0.659
+ 2 edm            energy        0.83 
+ 3 edm            tempo_0_1     0.536
+ 4 edm            valence       0.37 
+ 5 latin          danceability  0.729
+ 6 latin          energy        0.729
+ 7 latin          tempo_0_1     0.465
+ 8 latin          valence       0.628
+ 9 pop            danceability  0.652
+10 pop            energy        0.727
+# ... with 14 more rows
