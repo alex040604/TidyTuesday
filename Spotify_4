@@ -1,0 +1,18 @@
+
+
+#Libraries
+library(tidyverse)
+library(lubridate)
+
+spotify_songs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+spotify_songs %>% 
+  count(playlist_genre, track_artist, sort = TRUE) %>% 
+  group_by(playlist_genre) %>% 
+  top_n(5) %>% 
+  ungroup() %>% 
+  mutate(track_artist = fct_reorder(track_artist, n)) %>% 
+  ggplot(aes(track_artist, n, fill = playlist_genre))+
+    geom_col()+
+    coord_flip() +
+    facet_wrap(~playlist_genre, scales = "free_y")+
+    labs(x="", y="", fill="", title = "TOP 5 ARTIST BY GENRE IN SPOTIFY")
