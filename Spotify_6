@@ -1,0 +1,132 @@
+---
+title: "Spotify_6"
+author: "AlexArruda"
+date: "29/01/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Running this document (via ctrl+shift+R) will create spotify_dashboard.Rmd and 
+render it into a flexdashboard.
+
+```{r libraries}
+devtools::install_github("mikemahoney218/heddlr")
+library(heddlr)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(tidyr)
+```
+
+```{r data_wrangling}
+Spotify <- read_csv("spotify_songs.csv") %>%
+  mutate(track_album_release_date = lubridate::as_date(track_album_release_date)) %>%
+  mutate(playlist_genre = stringr::str_to_title(playlist_genre),
+         playlist_genre = stringr::str_replace_all(playlist_genre, "Edm", "EDM"),
+         playlist_subgenre = stringr::str_to_title(playlist_subgenre),
+         playlist_subgenre = stringr::str_replace_all(playlist_subgenre, "Edm", "EDM"))
+```
+
+```{r make_functions}
+make_subgenre_patchwork <- function(genre, subgenre) {
+  a <- Spotify %>%
+    filter(playlist_genre == genre &
+             playlist_subgenre == subgenre) %>%
+    ggplot(aes(track_popularity)) +
+    geom_histogram(color = "black") + 
+    scale_y_continuous(expand = expand_scale(mult = c(0, 0.07))) +
+    theme_minimal() +
+    labs(x = "Track popularity",
+         y = "Number of tracks",
+         title = "Song popularity")
+  
+  b  <- Spotify %>%
+    filter(playlist_genre == genre &
+             playlist_subgenre == subgenre) %>%
+    select_if(is.numeric) %>%
+    select(-track_popularity, -key, -tempo, -duration_ms, -mode, -loudness) %>%
+    summarise_all(mean) %>%
+    gather(dimension, val) %>%
+    ggplot(aes(dimension, val, fill = dimension)) +
+    geom_col(color = "black") +
+    scale_fill_brewer(name = "",
+                      palette = "Set2") +
+    coord_polar() +
+    theme_minimal() %+replace%
+    theme(axis.text.x = element_blank(),
+          axis.text.y = element_blank()) +
+    labs(x = "",
+         y = "",
+         title = "Average song characteristics")
+  
+  c <- Spotify %>%
+    filter(playlist_genre == genre &
+             playlist_subgenre == subgenre) %>%
+    ggplot(aes(duration_ms, track_popularity, color = tempo)) +
+    geom_point(alpha = 0.4) +
+    scale_color_viridis_c() +
+    theme_minimal() +
+    labs(x = "Duration (ms)",
+         y = "Track popularity",
+         title = "Popularity versus length")
+  
+  a + b + c
+}
+make_popularity_ridge <- function(genre) {
+  Spotify %>%
+  filter(playlist_genre == genre) %>%
+  ggplot(aes(track_popularity, playlist_subgenre, fill = playlist_subgenre)) +
+  ggridges::geom_density_ridges() +
+  theme_minimal() %+replace%
+  theme(legend.position = "none") +
+  labs(x = "Popularity",
+       y = "Subgenre",
+       title = "Popularity by subgenre")
+}
+make_release_point_cloud <- function(genre) {
+ Spotify %>%
+  mutate(track_album_release_date = lubridate::as_date(track_album_release_date)) %>%
+  filter(playlist_genre == genre &
+           track_album_release_date > '2015-01-01')  %>%
+  ggplot(aes(lubridate::year(track_album_release_date),
+             playlist_subgenre)) +
+  geom_jitter(alpha = 0.4) +
+  scale_x_continuous(breaks = 2015:2020) +
+  theme_minimal() +
+  labs(x = "Release year",
+       y = "",
+       title = "Songs by release year") 
+}
+```
+
+```{r}
+draft_objects <- import_draft("frontmatter" = "frontmatter.Rmd",
+                                "genre_pattern" = "genre_pattern.Rmd",
+                                "subgenre_pattern" = "subgenre_pattern.Rmd")
+template <- Spotify %>%
+  distinct(playlist_genre, playlist_subgenre) %>%
+  nest(playlist_subgenre = playlist_subgenre) %>%
+  mutate(genre = heddle(playlist_genre, draft_objects$genre_pattern, "GENRE_TAG"),
+         subgenre = purrr::map(playlist_subgenre, heddle, draft_objects$subgenre_pattern, "SUBGENRE_TAG" = playlist_subgenre),
+         subgenre = purrr::map_chr(subgenre, make_template),
+         template = paste0(genre, subgenre))
+make_template(draft_objects$frontmatter,
+              template$template) %>%
+  use_parameters(Spotify,
+                 make_popularity_ridge,
+                 make_release_point_cloud,
+                 make_subgenre_patchwork) %>%
+  export_template("spotify_dashboard.Rmd")
+```
+
+```{r}
+rmarkdown::render("spotify_dashboard.Rmd", 
+                  params = list(Spotify = Spotify,
+                                make_popularity_ridge = make_popularity_ridge,
+                                make_release_point_cloud = make_release_point_cloud,
+                                make_subgenre_patchwork = make_subgenre_patchwork))
+```
