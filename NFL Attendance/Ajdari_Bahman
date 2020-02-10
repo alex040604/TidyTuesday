@@ -24,3 +24,5 @@ y = "",
 fill = ""
 )
 heat_map
+
+# sum_attendance %>% pivot_wider(names_from = week, values_from = sum_attendance) sá a tabela com os valores!
