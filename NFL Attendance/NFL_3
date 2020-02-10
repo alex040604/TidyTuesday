@@ -1,0 +1,80 @@
+---
+title: "NFL_3"
+author: "AlexArruda"
+date: "10/02/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Robert Hogg
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+attendance <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/attendance.csv')
+#standings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/standings.csv')
+#games <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/games.csv')
+```
+
+
+```{r}
+#Preprocessing
+
+att_change <- attendance %>% 
+  select(year, team, team_name, total) %>% 
+  rename(team_city = team) %>% 
+  distinct() %>% 
+  filter(year %in% c(2000,2019)) %>% 
+  pivot_wider(names_from = year, values_from = total, names_prefix = "year_") %>% 
+  mutate(growth = year_2019/year_2000 - 1,
+         team = paste(team_city, team_name)) %>% 
+  mutate(attendance_change = ifelse(growth > 0, "increase", "decrease")) %>% 
+  mutate(team = fct_reorder(team, growth),
+         growth = round(growth, 2)) %>% 
+  arrange(desc(growth))
+
+excluded_teams <- att_change %>% 
+  filter(is.na(growth)) %>% 
+  pull(team)
+
+att_change_totla <-  attendance %>% 
+  rename(team_city = team) %>% 
+  mutate(team = paste(team_city, team_name)) %>% 
+  filter(!team %in% excluded_teams,
+         year %in% c(2000, 2019)) %>% 
+  group_by(year) %>% 
+  summarise(total = sum(total)) %>% 
+  pivot_wider(names_from = year, values_from = total, names_prefix = "year_") %>% 
+  mutate(growth = year_2019/year_2000 - 1,
+         team = "ALL",
+         growth_disp = round(growth, 3))
+
+#Plot
+att_change %>% 
+  filter(!is.na(growth)) %>% 
+  ggplot(aes(y = growth, x = team, label = scales::percent(growth)))+
+  geom_hline(yintercept = att_change_totla$growth, color = "#557BA1")+
+  geom_point(aes(color = attendance_change), size = 6.5) +
+  scale_color_manual(name = "Attendance change",
+                     labels = c("decrease", "increase"),
+                     values = c("decrease"="#DA2127", "increase"="#003A73"))+
+  geom_text(color = "white", size = 2) +
+  theme_minimal() +
+  theme(legend.position = "top",
+        panel.grid.major.y = element_line(linetype = 2),
+        panel.grid.minor.x = element_blank()) +
+  coord_flip() +
+  scale_y_continuous(labels = scales::percent, limits = c(-.25, 0.25)) +
+  annotate("text", label = "Total NFL attendance change", y = 0.02, x = 2,
+           color = "#557BA1", hjust = 0) +
+  labs(title = "How did the attendance changes from 2000 to 2019 in % by Team",
+       X = "Team",
+       y = "Attendance change in %")
+
+```
