@@ -1,0 +1,26 @@
+sum_attendance <- attendance %>%
+group_by(year, week) %>%
+summarise(
+sum_attendance = sum(weekly_attendance, na.rm = TRUE)
+)
+
+#Tile
+heat_map _< ggplot(data = sum_attendance, aes(factor(week), factor(year), fill = sum_attendance)) +
+geom_tile(color = "white") +
+scal_fill_gradient2(low = "grey", high = "navyblue", mid = "lightblue", midpoint = 2000000, 
+breaks = c(1700000, 2000000, 2300000), labels = c("Low", <edium", "High")) +
+theme(
+aspect.ratio = 1/2,
+legend.position = "bottom",
+legend.key.width = unit(2, "cm"),
+legend.justification = "center",
+plot.tittle = element_text(face = "bold", size = 18)
+)+
+labs(
+title = "NFL Weekly Attendance",
+subtittle = "NFL Audiences from 2000 to 2019",
+x = "Week",
+y = "",
+fill = ""
+)
+heat_map
