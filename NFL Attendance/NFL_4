@@ -85,7 +85,7 @@ gg_2 <-
     size = 2
   ) +
   geom_hline(
-    dat = df,
+    data = df,
     mapping = aes(yintercept = avg_20),
     color = "red",
     size = .5,
