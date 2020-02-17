@@ -1,9 +1,24 @@
+---
+title: "NFL_5"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
 ############
 # Tidy Tuesday Week 5 2020: Super Bowl
 # February 4, 2020
 # Jennifer Truong
 ############
+```
 
+
+```{r}
 # ---
 # Preliminary Stuff
 # ---
@@ -11,20 +26,34 @@
 # Attach packages
 
 library(tidyverse)
+#install.packages('ggpubr')
 library(ggpubr)
 library(gridExtra)
 library(stringr)
+#install.packages('here')
 library(here)
+#install.packages("devtools")
+#devtools::install_github("tidyverse/tidyr")
+```
 
+
+```{r}
 # -----
 # Read in Super Bowl data
 # -----
 
-attendance <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/attendance.csv') %>% 
-  pivot_wider(names_from = week, values_from = weekly_attendance) # Clean data by pivoting wider by weekly attendance
-standings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/standings.csv')
-games <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/games.csv')
+attendance2 <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/attendance.csv')
 
+attendance <- attendance2 %>% 
+  pivot_wider(names_from = week, values_from = weekly_attendance) # Clean data by pivoting wider by weekly attendance
+
+standings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/standings.csv')
+
+games <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/games.csv')
+```
+
+
+```{r}
 # -----
 # Join attendance and standings data frames together
 # -----
@@ -32,7 +61,10 @@ games <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidy
 sb_join <- dplyr::left_join(attendance,
                             standings,
                             by = c("year", "team_name", "team"))
+```
 
+
+```{r}
 # ----
 # Filter data to Super Bowl winners
 # -----
@@ -41,7 +73,10 @@ sb_join_clean <- sb_join %>%
   rename("total_attendance" = "total") %>%  # Rename "total" column to reflect attendance
   filter(sb_winner == "Won Superbowl") %>%  # Filter to only teams that made it to playoffs
   unite("full_team_name", team:year, sep = " ") # Combine team city and team name into one column
+```
 
+
+```{r}
 # -----
 # Make two bar graphs for offensive and defensive rankings
 # -----
@@ -72,7 +107,10 @@ sb_off <- ggplot(sb_join_clean,
                               face = "bold"), # Adjust axis title font size
     axis.title.x = element_blank() # Remove y-axis title to avoid redundancy
   )
+```
 
+
+```{r}
 # Defensive ranking bar graph 
 
 sb_def <- ggplot(sb_join_clean,
@@ -98,7 +136,10 @@ sb_def <- ggplot(sb_join_clean,
     axis.title = element_text(size = 10,
                               face = "bold") # Adjust axis title font size
   )
+```
 
+
+```{r}
 # -----
 # Place both bar graphs together
 # -----
@@ -116,7 +157,10 @@ sb_caption <- ggparagraph("Here we examine the offensive and defensive rankings 
 sb_credits <- text_grob("Data: Pro Football Reference || Viz: @jktruong1 || #TidyTuesday",
                              just = "center", hjust = 1, vjust = 0,
                              rot = 0, face = NULL, size = 8)
+```
 
+
+```{r}
 # Set up layout matrix
 
 lay <- rbind(c(1,1,1,1,1,1),
@@ -152,3 +196,4 @@ ggsave(here("2020", "2020_02_04","tidytuesday_superbowl.png"), g,
        height = 5,
        units = "in",
        dpi = 300) #saves graph as png
+```
