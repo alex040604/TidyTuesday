@@ -1,0 +1,14 @@
+Michael Kearney
+
+
+install.packages('rtweet')
+library(rtweet)
+
+
+
+nv <- rtweet::lookup_coords("Nevada")
+s <- list()
+while(Sys.time() < "2020-02-23 12:00:00") {
+  s[[length(s) + 1L]] <- try(rtweet::stream_tweets(nv, timeout = 360))
+  }
+
