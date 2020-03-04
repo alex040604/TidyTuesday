@@ -1,0 +1,416 @@
+https://github.com/jmcastagnetto/tidytuesday-kludges/tree/master/2020-02-25_measles-vaccination
+
+
+library(tidyverse)
+measles_raw <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-25/measles.csv')
+
+skimr::skim(measles_raw)
+
+measles <- measles_raw %>%
+  mutate(
+    xrel = as.numeric(xrel), # fix type for xrel
+    type = replace_na(type, "Unknown")
+  ) %>%
+  mutate_at( # let's impute the NA's to 0.0%
+    vars(xrel, xmed, xper),
+    replace_na, 0.0
+  ) %>%
+  mutate_at( # and convert the -1 to NA's
+    vars(overall, mmr),
+    na_if, -1
+  )
+
+save(
+  measles_raw, measles,
+  file = here::here("2020-02-25_measles-vaccination/measles-vaccination.Rdata")
+)
+
+
+
+
+library(tidyverse)
+library(ggridges)
+library(patchwork)
+
+load(
+  here::here("2020-02-25_measles-vaccination/measles-vaccination.Rdata")
+)
+
+#-- mmr rates
+
+mmr_df <- measles %>%
+  filter(!is.na(mmr)) %>%
+  select(state, mmr, type)
+
+# ggplot(mmr_df,
+#        aes(x = mmr, y = state, fill = type)) +
+#   geom_density_ridges(show.legend = FALSE) +
+#   theme_ridges(18) +
+#   facet_wrap(~type, scales = "free") +
+#   labs(
+#     x = "",
+#     y = "",
+#     title = "Distribution of MMR vaccination rates by state and type of school",
+#     subtitle = "#TidyTuesday, 2020-02-25: Measles vaccination",
+#     caption = "@jmcastagnetto, Jesús M. Castagnetto"
+#   ) +
+#   theme(
+#     strip.background = element_rect(fill = "peru"),
+#     strip.text = element_text(color = "white", face = "bold.italic"),
+#     plot.margin = unit(rep(1, 4), "cm")
+#   )
+
+df1 <- mmr_df %>%
+  filter(type %in% c("BOCES", "Charter", "Kindergarten", "Nonpublic"))
+
+df2 <- mmr_df %>%
+  filter(type %in% c("Private", "Public"))
+
+df3 <- mmr_df %>%
+  filter(type == "Unknown")
+
+pa <- ggplot(df1,
+             aes(x = mmr,
+                 y = fct_reorder(state, mmr,
+                                 .fun = median, .desc = TRUE),
+                 fill = type)) +
+  geom_density_ridges(
+    show.legend = FALSE,
+    quantile_lines = TRUE,
+    quantiles = 2
+  ) +
+  theme_ridges(18) +
+  facet_wrap(~type, scales = "free", ncol = 1) +
+  labs(
+    x = "",
+    y = ""
+  ) +
+  theme(
+    strip.background = element_rect(fill = "peru"),
+    strip.text = element_text(color = "white", face = "bold.italic")
+  )
+
+pb <- ggplot(df2,
+             aes(x = mmr,
+                 y = fct_reorder(state, mmr,
+                                 .fun = median, .desc = TRUE),
+                 fill = type)) +
+  geom_density_ridges(
+    show.legend = FALSE,
+    quantile_lines = TRUE,
+    quantiles = 2
+  ) +
+  theme_ridges(18) +
+  facet_wrap(~type, scales = "free", ncol = 1) +
+  labs(
+    x = "",
+    y = ""
+  ) +
+  theme(
+    strip.background = element_rect(fill = "peru"),
+    strip.text = element_text(color = "white", face = "bold.italic")
+  )
+
+pc <- ggplot(df3,
+             aes(x = mmr,
+                 y = fct_reorder(state, mmr,
+                                 .fun = median, .desc = TRUE),
+                 fill = type)) +
+  geom_density_ridges(
+    show.legend = FALSE,
+    quantile_lines = TRUE,
+    quantiles = 2
+  ) +
+  theme_ridges(18) +
+  facet_wrap(~type, scales = "free", ncol = 1) +
+  labs(
+    x = "",
+    y = ""
+  ) +
+  theme(
+    strip.background = element_rect(fill = "peru"),
+    strip.text = element_text(color = "white", face = "bold.italic")
+  )
+
+pa + pb + pc +
+  plot_annotation(
+    title = "Distribution of MMR vaccination rates by state and type of school",
+    subtitle = "#TidyTuesday, 2020-02-25: Measles vaccination dataset.",
+    caption = "Source: https://github.com/jmcastagnetto/tidytuesday-kludges // @jmcastagnetto, Jesús M. Castagnetto",
+    theme =  theme(
+      plot.title = element_text(size = 30),
+      plot.subtitle = element_text(size = 20, face = "italic"),
+      plot.caption = element_text(family = "Inconsolata", size = 14),
+      plot.margin = unit(rep(1, 4), "cm")
+    )
+  )
+
+ggsave(
+  filename = here::here("2020-02-25_measles-vaccination/distribution-mmr-state-type.png"),
+  width = 13,
+  height = 15
+)
+
+#-- overall rates
+
+overall_df <- measles %>%
+  filter(!is.na(overall)) %>%
+  select(state, overall, type)
+
+
+# ggplot(overall_df,
+#        aes(x = overall,
+#            y = fct_reorder(state, overall,
+#                            .fun = median, .desc = TRUE),
+#            fill = type)) +
+#   geom_density_ridges(
+#     show.legend = FALSE,
+#     rel_min_height = 0.01,
+#     quantile_lines = TRUE,
+#     quantiles = 2
+#   ) +
+#   theme_ridges(18) +
+#   facet_wrap(~type, scales = "free") +
+#   labs(
+#     x = "",
+#     y = "",
+#     title = "Distribution of overall vaccination rates by state and type of school",
+#     subtitle = "#TidyTuesday, 2020-02-25: Measles vaccination",
+#     caption = "@jmcastagnetto, Jesús M. Castagnetto"
+#   ) +
+#   theme(
+#     strip.background = element_rect(fill = "peru"),
+#     strip.text = element_text(color = "white", face = "bold.italic"),
+#     plot.margin = unit(rep(1, 4), "cm")
+#   )
+
+
+
+p1 <- ggplot(overall_df %>% filter(type != "Unknown"),
+         aes(x = overall,
+             y = fct_reorder(state, overall,
+                             .fun = median, .desc = TRUE),
+             fill = type)) +
+    geom_density_ridges(
+      show.legend = FALSE,
+      #rel_min_height = 0.01,
+      quantile_lines = TRUE,
+      quantiles = 2,
+      jittered_points = TRUE,
+      position = position_points_jitter(width = 0.05, height = 0),
+      point_shape = '|', point_size = 2, point_alpha = 1, alpha = 0.7
+    ) +
+    theme_ridges(18) +
+    facet_wrap(~type, scales = "free", ncol = 1) +
+    labs(
+      x = "",
+      y = ""
+    ) +
+    theme(
+      strip.background = element_rect(fill = "peru"),
+      strip.text = element_text(color = "white", face = "bold.italic")
+    )
+
+p2 <- ggplot(overall_df %>% filter(type == "Unknown"),
+             aes(x = overall,
+                 y = fct_reorder(state, overall,
+                                 .fun = median, .desc = TRUE),
+                 fill = type)) +
+  geom_density_ridges(
+    show.legend = FALSE,
+    #rel_min_height = 0.01,
+    quantile_lines = TRUE,
+    quantiles = 2,
+    jittered_points = TRUE,
+    position = position_points_jitter(width = 0.05, height = 0),
+    point_shape = '|', point_size = 1, point_alpha = 1, alpha = 0.7
+  ) +
+  theme_ridges(18) +
+  facet_wrap(~type, scales = "free", ncol = 1) +
+  labs(
+    x = "",
+    y = ""
+  ) +
+  theme(
+    strip.background = element_rect(fill = "peru"),
+    strip.text = element_text(color = "white", face = "bold.italic")
+  )
+
+p1 + p2 +
+  plot_annotation(
+    title = "Distribution of overall vaccination rates by state and type of school",
+    subtitle = "#TidyTuesday, 2020-02-25: Measles vaccination dataset.",
+    caption = "Source: https://github.com/jmcastagnetto/tidytuesday-kludges // @jmcastagnetto, Jesús M. Castagnetto",
+    theme =  theme(
+      plot.title = element_text(size = 30),
+      plot.subtitle = element_text(size = 20, face = "italic"),
+      plot.caption = element_text(family = "Inconsolata", size = 14),
+      plot.margin = unit(rep(1, 4), "cm")
+    )
+  )
+
+ggsave(
+  filename = here::here("2020-02-25_measles-vaccination/distribution-overall-state-type.png"),
+  width = 14,
+  height = 16
+)
+
+
+
+
+
+library(tidyverse)
+
+load(
+  here::here("2020-02-25_measles-vaccination/measles-vaccination.Rdata")
+)
+
+ggplot(measles %>% filter(!is.na(mmr)),
+       aes(y = fct_reorder(state, mmr, .fun = median, .desc = TRUE),
+           x = mmr)) +
+  geom_boxplot(outlier.colour = "yellow",
+               outlier.size = .5,
+               show.legend = FALSE) +
+  ggdark::dark_theme_linedraw(20) +
+  labs(
+    y = "",
+    x = "",
+    title = "MMR vaccination rates by state",
+    subtitle = "#TidyTuesday, 2020-02-25: Measles vaccination",
+    caption = "Source: https://github.com/jmcastagnetto/tidytuesday-kludges\n@jmcastagnetto, Jesús M. Castagnetto"
+  ) +
+  theme(
+    plot.title = element_text(size = 30),
+    plot.subtitle = element_text(size = 20, face = "italic"),
+    plot.caption = element_text(family = "Inconsolata", size = 14),
+    plot.margin = unit(rep(1, 4), "cm")
+  )
+
+ggsave(
+  filename = here::here("2020-02-25_measles-vaccination/boxplot-mmr-state.png"),
+  width = 9,
+  height = 10
+)
+
+ggplot(measles %>% filter(!is.na(overall)),
+       aes(y = fct_reorder(state, overall,
+                           .fun = median, .desc = TRUE),
+           x = overall)) +
+  geom_boxplot(outlier.colour = "yellow",
+               outlier.size = .5,
+               show.legend = FALSE) +
+  ggdark::dark_theme_linedraw(20) +
+  labs(
+    y = "",
+    x = "",
+    title = "Overall vaccination rates by state",
+    subtitle = "#TidyTuesday, 2020-02-25: Measles vaccination",
+    caption = "Source: https://github.com/jmcastagnetto/tidytuesday-kludges\n@jmcastagnetto, Jesús M. Castagnetto"
+  ) +
+  theme(
+    plot.title = element_text(size = 30),
+    plot.subtitle = element_text(size = 20, face = "italic"),
+    plot.caption = element_text(family = "Inconsolata", size = 14),
+    plot.margin = unit(rep(1, 4), "cm")
+  )
+
+ggsave(
+  filename = here::here("2020-02-25_measles-vaccination/boxplot-overall-state.png"),
+  width = 9,
+  height = 10
+)
+
+
+
+
+
+library(tidyverse)
+library(readxl)
+
+
+measles1 <- read_xls(
+  path = here::here("2020-02-25_measles-vaccination/who-data/incidence_series.xls"),
+  sheet = 5
+) %>%
+  pivot_longer(
+    cols = 5:43,
+    names_to = "year",
+    values_to = "total"
+  ) %>%
+  mutate(
+    year = as.integer(year)
+  ) %>%
+  janitor::clean_names() %>%
+  rename(
+    region = who_region,
+    country = cname,
+    iso3 = iso_code
+  )
+
+measles2 <- read_xls(
+  path = here::here("2020-02-25_measles-vaccination/who-data/measlescasesbycountrybymonth.xls"),
+  sheet = 2
+) %>%
+  pivot_longer(
+    cols = January:December,
+    names_to = "month",
+    values_to = "cases"
+  ) %>%
+  janitor::clean_names() %>%
+  mutate(
+    cases = as.integer(cases),
+    ts = lubridate::ymd(
+      glue::glue("{y}-{m}-{d}", y = year, m = month, d = "01")
+    )
+  )
+
+measles_cntry_year <- measles2 %>%
+  group_by(region, country, iso3, year) %>%
+  summarise(
+    total = sum(cases, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  bind_rows(
+    measles1 %>%
+      select(region, country, iso3, year, total)
+  ) %>%
+  arrange(
+    region, country, iso3, year
+  )
+
+ggplot(measles_cntry_year %>% filter(region == "AMR"),
+       aes(x = year,
+           y = total, fill = iso3)) +
+  # geom_segment(
+  #   aes(xend = year, yend = 0),
+  #   show.legend = FALSE
+  # ) +
+  # geom_point(show.legend = FALSE) +
+  geom_col(show.legend = FALSE, width = 1) +
+  scale_y_log10() +
+  scale_color_viridis_d(direction = -1) +
+  annotation_logticks(sides = "l") +
+  facet_wrap(~iso3) +
+  theme_minimal(14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, size = 9),
+    axis.text.y = element_text(size = 9),
+    axis.ticks = element_blank(),
+    strip.background = element_rect(fill = "grey90", color = "grey90"),
+    strip.text = element_text(size = 9, color = "black"),
+    plot.margin = unit(rep(1, 4), "cm")
+  ) +
+  labs(
+    y = "",
+    x = "",
+    title = "Evolution of measles cases in the Americas (1980-2020): Not all countries managed to reduce or eliminate cases.",
+    subtitle = "Source: WHO 'Measles and Rubella Surveillance Data' (Downloaded: 2020-02-26T09:22:00 PET)",
+    caption = "2020-02-27, @jmcastagnetto, Jesus M. Castagnetto"
+  )
+
+ggsave(
+  filename = here::here("2020-02-25_measles-vaccination/historical-measles-in-americas.png"),
+  width = 14,
+  height = 12
+)
