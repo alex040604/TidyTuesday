@@ -1,0 +1,25 @@
+## https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-06-23/readme.md
+library(tidyverse)
+library(bcmaps)
+locations <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-23/locations.csv')
+
+locations_sf <- locations %>%
+    select(animal_id, longitude, latitude) %>%
+    st_as_sf(coords = c("longitude", "latitude")) %>%
+    st_set_crs(4326) %>%
+    transform_bc_albers()
+
+ggplot() + 
+    geom_sf(data = bc_neighbours(), color = "white", fill = "#CDD5DC") + 
+    geom_sf(data = watercourses_15M(), color = "white") +
+    geom_sf(data = locations_sf, aes(color = animal_id), 
+            alpha = 0.1, size = 1.2, show.legend = FALSE) +
+    coord_sf(datum = NA) +
+    scale_color_viridis_d() +
+    annotate(geom = "text", x = 1.5e5, y = 4e5, 
+             label = "Caribou in British Columbia", 
+             family = "IBMPlexSans-Bold", color = "#575965", size = 8, hjust = 0) +
+    annotate(geom = "text", x = 1.5e5, y = 3.5e5, 
+             label = "Locations for each animal are shown in a different color", 
+             family = "IBMPlexSans-Medium", color = "#575965", size = 4, hjust = 0) +
+    theme_void()
