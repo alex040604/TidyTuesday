@@ -1,0 +1,378 @@
+---
+title: "Xmen"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+.........................PART I
+
+
+
+
+
+```{r}
+# Claremont Run of X-men
+# TidyTuesday 2020 week 27
+# Rebecca Stevick updated 6/30/2020
+
+# Load libraries
+library(tidyverse)
+library(ggpubr)
+library(hrbrthemes)
+```
+
+
+```{r}
+# Load data - use the characters data set. Many others available in the Claremont Run package: remotes::install_github("malcolmbarrett/claremontrun")
+characters <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-30/characters.csv')
+
+# let's look at when characters flew!
+flying<-characters %>%
+  # remove rows that aren't flying
+  drop_na(flying_with_another_character) %>%
+  group_by(character) %>%
+  # count up number of flights per character
+  count(name="fly") %>%
+  arrange(desc(fly))
+
+# and when they hugged!
+hugging<-characters %>%
+  # remove actions that aren't hugging
+  drop_na(hugging_with_which_character) %>%
+  group_by(character) %>%
+  # count up number of hugs per character
+  count(name="hug") %>%
+  arrange(desc(hug))
+
+# join hugging and flying counts per character
+flyinghugging<-full_join(flying, hugging) %>% 
+  # add in a 0 if they didn't hug or fly
+  replace_na(list("hug"=0, "fly"=0))
+```
+
+
+```{r}
+# plotting time
+ggplot(flyinghugging, aes(x=fly, y=hug))+
+  # add diamond points for each character
+  geom_point(shape=18, size=6, 
+             # highlight characters who hug more than 20 times
+             color=ifelse(flyinghugging$hug > 20, "royalblue3", "gray60"))+
+  # add regression line
+  geom_smooth(method="lm", color="red3", fill="red2", alpha=0.1)+
+  # show regression equation, R2 and p-value
+  stat_regline_equation(label.x = 24, label.y=12, color="yellow") + stat_cor(label.x=24, label.y=11, color="yellow")+
+  # add label and arrow for Storm
+  geom_label(aes(x = 24, y = 21, label = "Storm \n(Ororo Munroe)"),alpha=0, hjust = 1, vjust = 0.5, lineheight = 0.8, colour = "gray70", label.size = NA, size = 4)+
+  geom_curve(aes(x = 24, y = 21, xend = 27, yend = 22), colour = "gray70", size=0.5, curvature = -0.2, arrow = arrow(length = unit(0.03, "npc")))+
+  # add label and arrow for Shadowcat
+  geom_label(aes(x = 5, y = 21, label = "Ariel/Sprite/Shadowcat \n(Kitty Pryde)"), alpha=0, hjust = 0, vjust = 0.5, lineheight = 0.8, colour = "gray70", label.size = NA, size = 4)+
+  geom_curve(aes(x = 5, y = 21, xend = 3, yend = 23), colour = "gray70", size=0.5, curvature = -0.3,arrow = arrow(length = unit(0.03, "npc")))+
+  # change the overall theme
+  theme_ft_rc()+
+  # edit the text sizes
+  theme(plot.title=element_text(size=20),plot.subtitle = element_text(color="royalblue", face="bold"), axis.title.x = element_text(size=14, face="bold"), axis.title.y = element_text(size=14, face="bold"), plot.caption = element_text(size=12))+
+  # add those labels
+  labs(x="Number of issues where character flew", y="Number of issues where \ncharacter hugged someone", 
+       title="X-Men characters who fly more also hug more",
+       subtitle="Frequent huggers are highlighted in blue.",
+       caption = "Source: @ClarementRun | Plot by @rjstevick for #TidyTuesday")
+```
+
+
+```{r}
+# Saving -----------------------------
+ggsave("ClaremontRun_plot.png", width = 12, height = 6.5, dpi=400)
+```
+
+
+
+
+.........................PART II
+
+
+
+
+
+```{r}
+## Extending Rebecca's analysis!
+
+
+# simple linear regression
+flyinghugging %>%
+  lm(hug ~ fly, data = .) %>%
+  summary()
+
+# correlation between fly and hug
+with(flyinghugging, cor.test(fly, hug))
+
+# r2 between fly and hug -- same as the multiple r2 from the linear regression
+with(flyinghugging, cor.test(fly, hug))$estimate ^ 2
+
+
+# Show how regression with z-scores produces a beta that represents the correlation coefficient
+# NOTE: was having an issue with the sd() function working on her dataset -- kept returning NA
+flyinghugging %>%
+  mutate(hug_z = (hug - 6.9) / 7.04,
+         fly_z = (fly - 7.82) / 7.98) %>%
+  lm(hug_z ~ fly_z, data = .) %>%
+  summary()
+
+
+## Make pretty colors for our regression output
+library(broom)
+library(colortable)
+library(knitr)
+
+fit <- lm(hug ~ fly, data = flyinghugging)
+
+summary(fit)
+
+# YUK!!
+# tidy up the output with the broom package and add colors with colortable!
+
+fit_tbl <- tidy(fit)
+
+fit_tbl %>%
+  mutate(p.value = set_styling(x = p.value,
+                               idx = p.value < 0.05,
+                               background = "palegreen",
+                               text_color = "black",
+                               style = "bold"))
+© 2020 GitHub, Inc.
+```
+
+
+
+
+.........................PART III
+
+
+
+
+
+```{r}
+---
+title: "TidyX 17 - Kmeans and PCA"
+author: "Patrick Ward"
+date: "7/2/2020"
+output: html_document
+---
+```
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, include = F, warning = F, message = F)
+
+## Packages & Functions  --------------------------------------------------
+
+suppressPackageStartupMessages({
+  suppressWarnings({
+    library(tidyverse)
+    library(tidytuesdayR)
+    library(ggrepel)
+    library(cluster)
+    library(factoextra)
+  })
+})
+# set plot theme
+theme_set(theme_light())
+```
+
+```{r functions}
+# z-score function for scaling variables
+z_score <- function(x){
+  z = (x - mean(x, na.rm = T)) / sd(x, na.rm = T)
+  return(z)
+  }
+```
+
+```{r load-data}
+## Load XMEN data ------------------------------------------------------
+xmen <- tt_load("2020-06-30")
+
+xmen
+```
+
+```{r investigate}
+characters <- xmen$characters 
+
+characters <- characters %>%
+  separate(character, c("character", "alias"), sep = " = ")
+
+visualization <- xmen$character_visualization
+
+visualization <- visualization %>%
+  separate(character, c("character", "alias"), sep = " = ")
+
+## Look at data ------------------------------------------------------
+glimpse(characters)
+
+characters %>% head() %>% View()
+
+glimpse(visualization)
+
+visualization %>% head() %>% View()
+
+characters %>%
+  count(issue, sort = T)
+
+characters %>%
+  count(character, sort = T)
+
+visualization %>%
+  count(issue, sort = T)
+
+visualization %>%
+  count(character, sort = T)
+```
+
+
+```{r data aggregation}
+### Create a 'total' column of different variables for each character over this time
+visualization2 <- visualization %>%
+  group_by(character) %>%
+  summarize(across(.cols = speech:depicted, list(Total = sum)))
+
+characters2 <- characters %>%
+  group_by(character) %>%
+  summarize(across(.cols = rendered_unconcious:clothing_torn, list(Total = sum)))
+
+## Join data frames by character
+df <- characters2 %>%
+  inner_join(visualization2)
+```
+
+
+# EDA
+
+```{r EDA}
+df %>%
+  ggplot(aes(x = speech_Total, y = rendered_unconcious_Total)) +
+  geom_point(aes(color = character),
+             size = 3) +
+  geom_text_repel(aes(label = character)) +
+  theme(legend.position = "none")
+
+df %>%
+  ggplot(aes(x = speech_Total, y = clothing_torn_Total)) +
+  geom_point(aes(color = character),
+             size = 3) +
+  geom_text_repel(aes(label = character)) +
+  theme(legend.position = "none")
+
+df %>%
+  ggplot(aes(x = speech_Total, y = thought_Total)) +
+  geom_point(aes(color = character),
+             size = 3) +
+  geom_text_repel(aes(label = character)) +
+  theme(legend.position = "none")
+
+df %>%
+  ggplot(aes(x = speech_Total, y = declared_dead_Total)) +
+  geom_point(aes(color = character),
+             size = 3) +
+  geom_text_repel(aes(label = character)) +
+  theme(legend.position = "none")
+
+### Example of a base R pairs plot
+# Can get messy with a lot of variables
+plot(df[2:11], 
+     col = as.factor(df$character))
+```
+
+
+# Kmeans Clustering
+
+```{r kmeans}
+# create data frame of scaled variables prior to clustering
+df_clus <- df %>%
+  summarize(across(rendered_unconcious_Total:depicted_Total,
+                list(z = z_score)))
+
+## How many clusters?
+wss <- 0
+
+N_clusters <- 8
+
+for(i in seq(from = 1, to = N_clusters, by = 1)){
+  
+  # create kmeans for each cluster choice 
+  fit <- kmeans(df_clus, centers = i)
+  
+  # store results of the sum of the within sum of squares
+  wss[i] <- sum(fit$withinss)
+}
+
+plot(x = 1:8,
+     y = wss,
+     type = "b")
+
+## k-means cluster
+
+set.seed(55)
+
+xmenCluster <- kmeans(df_clus, centers = 3, nstart = 20)
+
+xmenCluster
+
+# Put clusters assignments back into the original data
+
+df$Cluster <- xmenCluster$cluster
+
+# Which cluster was each character in?
+
+df %>%
+  select(character, Cluster) %>% 
+  mutate(
+    Cluster = color_vctr(Cluster, text_color = c("red","green","blue")[Cluster])
+  ) %>% 
+  arrange(Cluster) %>% 
+  data.frame
+
+# Two methods of plotting clusters available in R
+
+fviz_cluster(xmenCluster, geom = "point", df_clus)
+
+clusplot(df_clus, xmenCluster$cluster)
+
+## YUK!! Both of these plots lack info that we'd like to see
+## The clusplot() is plotting a PCA. Let's build our own PCA and make a nicer plot!
+```
+
+
+# PCA
+
+```{r PCA}
+# PCA on the scaled data
+xmenPCA <- princomp(df_clus)
+
+summary(xmenPCA)
+
+names(xmenPCA)
+
+xmenPCA$loading
+
+# biplot of the PCA
+biplot(xmenPCA)
+
+biplot(xmenPCA,
+       choices = 2:3)
+
+# Add component scores into the original data frame
+df <- cbind(df, xmenPCA$scores)
+
+# Plot the first two principal components
+df %>%
+  ggplot(aes(x = Comp.1, y = Comp.2)) +
+  geom_point(aes(color = as.factor(Cluster)),
+             size = 3) +
+  geom_text_repel(aes(label = character))
+```
